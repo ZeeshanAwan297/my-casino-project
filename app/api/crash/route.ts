@@ -5,6 +5,7 @@ let gameState = {
   multiplier: 1,
   crashPoint: 0,
   running: false,
+   countdownEnd: 0,
   cashedOutUsers: new Set<string>(),
 };
 
@@ -23,6 +24,7 @@ function resetGame() {
     multiplier: 1,
     crashPoint: generateCrashPoint(),
     running: true,
+    countdownEnd: 0,
     cashedOutUsers: new Set(),
   };
 
@@ -34,9 +36,10 @@ function resetGame() {
 
     if (gameState.multiplier >= gameState.crashPoint) {
       gameState.running = false;
+       gameState.countdownEnd = Date.now() + 5000;
       clearInterval(interval);
 
-      setTimeout(resetGame, 3000); // next round after 3 sec
+      setTimeout(resetGame, 5000); // next round after 3 sec
     }
   }, 150);
 }
@@ -54,11 +57,19 @@ export async function POST(req: Request) {
     // BET (JOIN ROUND)
     // ======================
     if (action === "bet") {
-      const [rows]: any = await db.query(
-        "SELECT balance FROM users WHERE id=?",
-        [userId]
-      );
 
+  // Betting sirf countdown ke dauran allow hogi
+  if (!gameState.running && Date.now() > gameState.countdownEnd) {
+    return NextResponse.json({
+      success: false,
+      message: "Betting Closed",
+    });
+  }
+
+  const [rows]: any = await db.query(
+    "SELECT balance FROM users WHERE id=?",
+    [userId]
+  );
       if (!rows.length)
         return NextResponse.json({ success: false });
 
@@ -121,13 +132,13 @@ export async function POST(req: Request) {
     // LIVE STATE (frontend sync)
     // ======================
     if (action === "state") {
-      return NextResponse.json({
-        running: gameState.running,
-        multiplier: gameState.multiplier,
-        crashPoint: gameState.crashPoint,
-      });
-    }
-
+  return NextResponse.json({
+    running: gameState.running,
+    multiplier: gameState.multiplier,
+    crashPoint: gameState.crashPoint,
+    countdownEnd: gameState.countdownEnd,
+  });
+}
     return NextResponse.json({
       success: false,
       message: "Invalid action",
