@@ -39,12 +39,12 @@ export async function POST(req: Request) {
       success: true,
       message: "User Registered Successfully",
     });
-  } catch (error) {
-    console.log(error);
+  } catch (error: any) {
+  console.error("REGISTER ERROR:", error);
 
-    return NextResponse.json({
-      success: false,
-      message: "Registration Failed",
+  return NextResponse.json({
+    success: false,
+    message: error.message || "Registration Failed",
     });
   }
 }
