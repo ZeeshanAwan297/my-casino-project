@@ -1,25 +1,24 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { db } from "@/app/lib/mysql";
+import { prisma } from "@/app/lib/prisma";
 
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
-    const [users]: any = await db.query(
-      "SELECT * FROM users WHERE email = ?",
-      [email]
-    );
+    const user = await prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
 
-    if (users.length === 0) {
+    if (!user) {
       return NextResponse.json({
         success: false,
         message: "User not found",
       });
     }
-
-    const user = users[0];
-
+    
     const passwordMatch = await bcrypt.compare(
       password,
       user.password
@@ -36,19 +35,19 @@ export async function POST(req: Request) {
       success: true,
       message: "Login Successful",
       user: {
-  id: user.id,
-  username: user.username,
-  email: user.email,
-  balance: user.balance,
-      }
-   } ) 
-    
-  } catch (error) {
-    console.log(error);
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        balance: user.balance,
+      },
+    });
+
+  } catch (error: any) {
+    console.error(error);
 
     return NextResponse.json({
       success: false,
-      message: "Login Failed",
+      message: error.message,
     });
   }
 }
